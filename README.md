@@ -96,7 +96,8 @@ docker compose
 | `SEARXNG_PORT` | `52034` | SearXNG 公開ポート |
 | `POSTGRES_PORT` | `52035` | PostgreSQL 公開ポート |
 | `FETCH_TIMEOUT` | `30` | 取得タイムアウト（秒） |
-| `API_KEY` | (空) | 設定時は Service / MCP 双方で認証 |
+| `FETCH_CONCURRENCY` | `3` | トピック観測時の並列取得数 |
+| `API_KEY` | (空) | 設定時は Service / MCP 双方で Bearer 認証。**本番では必須** |
 
 ## ローカル開発（任意）
 
@@ -120,6 +121,10 @@ observe(topic)
 ```
 
 > 仕様上の Trafilatura は Python 製のため、TypeScript 実装では Mozilla Readability を使用しています。
+
+## セキュリティ
+
+本番公開時は [SECURITY.md](SECURITY.md) を参照してください。`API_KEY` の設定を推奨します。
 
 ## 仕様
 

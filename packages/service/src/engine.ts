@@ -10,9 +10,11 @@ import type { ContentExtractor } from "./extractor/types.js";
 import { ObservationError } from "./errors.js";
 import type { FetchProvider } from "./providers/fetch/types.js";
 import type { SearchProvider } from "./providers/search/types.js";
+import { assertFetchableUrl } from "./security/url-policy.js";
 import type { Summarizer } from "./summarizer/types.js";
 import { hashContent } from "./storage/memory.js";
 import type { Storage, StoredSource } from "./storage/types.js";
+import { runWithConcurrency } from "./utils/concurrency.js";
 
 export interface ObservationEngineDeps {
   config: ServiceConfig;
@@ -38,25 +40,29 @@ export class ObservationEngine {
     );
 
     const articles: StoredSource[] = [];
-    let attemptedCount = 0;
+    const attemptedCount = searchResults.length;
 
-    for (const result of searchResults) {
-      attemptedCount += 1;
-      try {
-        const article = await this.fetchAndExtract(result.url, result.title);
-        if (!article) {
-          continue;
+    await runWithConcurrency(
+      searchResults,
+      this.deps.config.fetchConcurrency,
+      async (result) => {
+        try {
+          assertFetchableUrl(result.url);
+          const article = await this.fetchAndExtract(result.url, result.title);
+          if (!article) {
+            return;
+          }
+          articles.push({
+            title: article.title,
+            url: result.url,
+            content: article.content,
+            fetchedAt: new Date(),
+          });
+        } catch (error) {
+          console.error(`Source fetch failed for ${result.url}:`, error);
         }
-        articles.push({
-          title: article.title,
-          url: result.url,
-          content: article.content,
-          fetchedAt: new Date(),
-        });
-      } catch {
-        // Individual source failures are tolerated for topic observation.
-      }
-    }
+      },
+    );
 
     if (articles.length === 0) {
       throw new ObservationError("EXTRACTION_FAILED");
@@ -98,6 +104,8 @@ export class ObservationEngine {
 
   async observeUrl(request: ObserveUrlRequest): Promise<ObserveUrlResponse> {
     const url = request.url.trim();
+    assertFetchableUrl(url);
+
     const article = await this.fetchAndExtract(url);
 
     if (!article) {
@@ -134,6 +142,8 @@ export class ObservationEngine {
     url: string,
     fallbackTitle?: string,
   ): Promise<{ title: string; content: string } | null> {
+    assertFetchableUrl(url);
+
     const cached = await this.deps.storage.getCachedPage(
       url,
       this.deps.config.cacheTtlDays,
@@ -158,7 +168,7 @@ export class ObservationEngine {
     const fetchedAt = new Date();
 
     await this.deps.storage.upsertFetchedPage({
-      url,
+      url: fetched.url,
       title,
       content: extracted.content,
       contentHash,

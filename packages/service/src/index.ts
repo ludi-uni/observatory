@@ -24,7 +24,12 @@ serve(
   (info) => {
     console.error(`Observation Service listening on http://localhost:${info.port}`);
     console.error(
-      `Mode: storage=${config.databaseUrl ? "postgres" : "memory"}, search=${config.searxngUrl ? "searxng" : "disabled"}, fetch=${config.usePlaywright ? "playwright" : "http"}`,
+      `Mode: storage=${config.databaseUrl ? "postgres" : "memory"}, search=${config.searxngUrl ? "searxng" : "disabled"}, fetch=${config.usePlaywright ? "playwright" : "http"}, concurrency=${config.fetchConcurrency}`,
     );
+    if (!config.apiKey) {
+      console.error(
+        "WARNING: API_KEY is not set. /v1/* endpoints are unauthenticated. Set API_KEY for production.",
+      );
+    }
   },
 );

@@ -34,10 +34,11 @@ class StubFetch implements FetchProvider {
 }
 
 const config: ServiceConfig = {
-  port: 8080,
+  port: 52033,
   fetchTimeoutMs: 5000,
   cacheTtlDays: 7,
   searchResultLimit: 5,
+  fetchConcurrency: 3,
   usePlaywright: false,
   searxngUrl: "http://searxng:8080",
 };
@@ -72,6 +73,33 @@ describe("Observation API", () => {
     const recall = await app.request("/v1/observation?topic=Oracle%20Cloud%20Backup");
     const recallBody = await recall.json();
     expect(recallBody.history).toHaveLength(1);
+
+    await engine.close();
+  });
+
+  it("rejects observe-url for private network targets", async () => {
+    const storage = new MemoryStorage();
+    await storage.init();
+
+    const engine = new ObservationEngine({
+      config,
+      storage,
+      fetchProvider: new StubFetch(),
+      extractor: new ReadabilityExtractor(),
+      summarizer: new RuleBasedSummarizer(),
+    });
+
+    const app = createApp(config, engine);
+    const response = await app.request("/v1/observe-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: "http://127.0.0.1/admin" }),
+    });
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toBe("FETCH_FAILED");
 
     await engine.close();
   });

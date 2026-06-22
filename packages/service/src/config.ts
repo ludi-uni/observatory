@@ -6,6 +6,7 @@ export interface ServiceConfig {
   databaseUrl?: string;
   cacheTtlDays: number;
   searchResultLimit: number;
+  fetchConcurrency: number;
   usePlaywright: boolean;
 }
 
@@ -17,6 +18,7 @@ export function loadConfig(): ServiceConfig {
   const databaseUrl = process.env.DATABASE_URL || undefined;
   const cacheTtlDays = Number(process.env.CACHE_TTL_DAYS ?? "7");
   const searchResultLimit = Number(process.env.SEARCH_RESULT_LIMIT ?? "5");
+  const fetchConcurrency = Number(process.env.FETCH_CONCURRENCY ?? "3");
   const usePlaywright = process.env.USE_PLAYWRIGHT !== "false";
 
   return {
@@ -27,6 +29,7 @@ export function loadConfig(): ServiceConfig {
     databaseUrl,
     cacheTtlDays,
     searchResultLimit,
+    fetchConcurrency,
     usePlaywright,
   };
 }

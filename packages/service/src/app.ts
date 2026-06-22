@@ -9,6 +9,7 @@ import type {
 import type { ServiceConfig } from "./config.js";
 import type { ObservationEngine } from "./engine.js";
 import { ObservationError } from "./errors.js";
+import { assertFetchableUrl } from "./security/url-policy.js";
 
 export function createApp(config: ServiceConfig, engine: ObservationEngine): Hono {
   const app = new Hono();
@@ -43,8 +44,11 @@ export function createApp(config: ServiceConfig, engine: ObservationEngine): Hon
     }
 
     try {
-      new URL(body.url);
-    } catch {
+      assertFetchableUrl(body.url.trim());
+    } catch (error) {
+      if (error instanceof ObservationError) {
+        return serviceError(c, error.code, 400);
+      }
       return serviceError(c, "FETCH_FAILED", 400);
     }
 
@@ -91,5 +95,5 @@ function handleObservationError(
   }
 
   console.error("Unhandled observation error:", error);
-  return serviceError(c, "FETCH_FAILED", 500);
+  return serviceError(c, "EXTRACTION_FAILED", 500);
 }

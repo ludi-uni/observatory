@@ -131,7 +131,7 @@ export class PostgresStorage implements Storage {
           input.topic,
           input.summary,
           input.confidence,
-          JSON.stringify(input.evidence),
+          input.evidence,
           input.observedAt,
         ],
       );
