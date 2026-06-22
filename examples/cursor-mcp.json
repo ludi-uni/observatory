@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "observatory-docker": {
+      "command": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "D:/99.AITuber/observatory/docker-compose.yml",
+        "--profile",
+        "mcp",
+        "run",
+        "--rm",
+        "-i",
+        "mcp-server"
+      ]
+    },
+    "observatory-local": {
+      "command": "node",
+      "args": ["D:/99.AITuber/observatory/packages/mcp-server/dist/index.js"],
+      "env": {
+        "OBSERVATION_SERVICE_URL": "http://localhost:52033",
+        "OBSERVATION_TIMEOUT": "30"
+      }
+    }
+  }
+}

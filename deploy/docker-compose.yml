@@ -1,0 +1,6 @@
+# このディレクトリの Compose 定義はルートに移動しました。
+#
+#   cd ..
+#   docker compose up -d --build
+#
+# Dockerfile / init.sql / searxng 設定はこの deploy/ 配下にあります。

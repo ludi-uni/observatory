@@ -1,0 +1,91 @@
+name: observatory
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: observatory
+      POSTGRES_PASSWORD: observatory
+      POSTGRES_DB: observatory
+    ports:
+      - "${POSTGRES_PORT:-52035}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U observatory -d observatory"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: valkey-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_PORT:-52034}:8080"
+    volumes:
+      - ./deploy/searxng:/etc/searxng:rw
+    environment:
+      SEARXNG_BASE_URL: http://localhost:${SEARXNG_PORT:-52034}/
+    depends_on:
+      valkey:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  observation-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.service
+    image: observatory/service:latest
+    restart: unless-stopped
+    ports:
+      - "${SERVICE_PORT:-52033}:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgresql://observatory:observatory@postgres:5432/observatory
+      SEARXNG_URL: http://searxng:8080
+      FETCH_TIMEOUT: "${FETCH_TIMEOUT:-30}"
+      CACHE_TTL_DAYS: "${CACHE_TTL_DAYS:-7}"
+      SEARCH_RESULT_LIMIT: "${SEARCH_RESULT_LIMIT:-5}"
+      USE_PLAYWRIGHT: "true"
+      API_KEY: "${API_KEY:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      searxng:
+        condition: service_healthy
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.mcp
+    image: observatory/mcp:latest
+    environment:
+      OBSERVATION_SERVICE_URL: http://observation-service:8080
+      OBSERVATION_API_KEY: "${API_KEY:-}"
+      OBSERVATION_TIMEOUT: "${OBSERVATION_TIMEOUT:-30}"
+    depends_on:
+      observation-service:
+        condition: service_healthy
+    stdin_open: true
+    profiles:
+      - mcp
+
+volumes:
+  postgres_data:

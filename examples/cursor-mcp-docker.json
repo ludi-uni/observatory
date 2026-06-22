@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "observatory": {
+      "command": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "D:/99.AITuber/observatory/docker-compose.yml",
+        "--profile",
+        "mcp",
+        "run",
+        "--rm",
+        "-i",
+        "mcp-server"
+      ]
+    }
+  }
+}
