@@ -19,7 +19,7 @@ It searches through SearXNG, fetches pages, extracts readable content, produces 
 
 It is an observation layer: search, fetch, extract, summarize, store, and return evidence-backed observations as one agent-facing operation.
 
-## Quick start with Docker Compose
+## Local resident deployment
 
 Requirements: Docker Compose v2.
 
@@ -27,6 +27,7 @@ Requirements: Docker Compose v2.
 cp .env.example .env
 docker compose up -d --build
 curl http://localhost:52033/health
+curl http://localhost:52036/health
 ```
 
 The service is available at `http://localhost:52033`; SearXNG is at `http://localhost:52034`. Try an observation:
@@ -38,6 +39,19 @@ curl -X POST http://localhost:52033/v1/observe \
 ```
 
 Set `API_KEY` in `.env` before exposing the service outside a trusted network.
+
+The resident MCP endpoint is `http://127.0.0.1:52036/mcp`. It is included in the default Compose startup. The `mcp-server` profile remains available as a stdio compatibility adapter for IDEs that do not support HTTP.
+
+## OCI deployment
+
+Copy `.env.oci.example` to `.env.oci`, set a long random `API_KEY`, create the shared network, and start the isolated stack:
+
+```bash
+docker network create doll_runtime || true
+docker compose --env-file .env.oci -f infra/oci/docker-compose.observatory.yml up -d --build
+```
+
+The internal MCP endpoint is `http://mcp-server-http:8080/mcp`; host debug ports are localhost-only.
 
 ## MCP clients
 

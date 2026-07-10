@@ -1,6 +1,14 @@
 # MCP client setup
 
-The repository Compose setup is the source of truth. Start the backend with `docker compose up -d`, then use the MCP profile with a stdio client:
+The repository Compose setup is the source of truth. Start the resident HTTP MCP with `docker compose up -d --build` and configure an HTTP MCP client with:
+
+```text
+http://127.0.0.1:52036/mcp
+```
+
+For OCI, use the service URL on the shared Docker network, for example `http://mcp-server-http:8080/mcp`.
+
+The existing stdio profile remains available for IDEs that do not support HTTP:
 
 ```json
 {

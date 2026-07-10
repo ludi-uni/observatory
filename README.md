@@ -13,13 +13,13 @@ LLM 向けの観測基盤。検索・取得・抽出・要約を隠蔽し、`obs
 
 Observatory is an observation layer that searches, fetches, extracts, summarizes, stores, and returns evidence-backed observations.
 
-## Docker で全部起動（推奨）
+## ローカル常駐起動（推奨）
 
 前提: [Docker Desktop](https://www.docker.com/products/docker-desktop/) など Docker Compose v2 が使えること。
 
 ### 1. バックエンド起動
 
-リポジトリルートで:
+`.env.example` を `.env` にコピーして API key を設定し、リポジトリルートで:
 
 ```bash
 docker compose up -d --build
@@ -27,22 +27,24 @@ docker compose up -d --build
 
 起動するサービス:
 
-| サービス            | URL                    | 説明                 |
-| ------------------- | ---------------------- | -------------------- |
-| observation-service | http://localhost:52033 | 観測 API             |
-| searxng             | http://localhost:52034 | 検索エンジン         |
-| postgres            | localhost:52035        | 観測履歴 DB          |
-| valkey              | (内部)                 | SearXNG 用キャッシュ |
+| サービス            | URL                        | 説明                     |
+| ------------------- | -------------------------- | ------------------------ |
+| observation-service | http://localhost:52033     | 観測 API                 |
+| searxng             | http://localhost:52034     | 検索エンジン             |
+| postgres            | localhost:52035            | 観測履歴 DB              |
+| valkey              | (内部)                     | SearXNG 用キャッシュ     |
+| mcp-server-http     | http://localhost:52036/mcp | 常駐 Streamable HTTP MCP |
 
 動作確認:
 
 ```bash
 curl http://localhost:52033/health
+curl http://localhost:52036/health
 ```
 
-### 2. MCP Server（Cursor 等）
+### 2. MCP Server（DOLL / フィオ / HTTP MCP クライアント）
 
-バックエンド起動後、MCP は Docker 経由で stdio 接続します。
+常駐版は `http://127.0.0.1:52036/mcp` で利用できます。HTTP MCP クライアントにはこの URL を設定してください。常駐版は `docker compose up -d --build` に含まれ、`docker compose restart mcp-server-http` で再起動できます。
 
 `examples/cursor-mcp-docker.json` を参考に設定してください。`docker-compose.yml` のパスは環境に合わせて変更してください。
 
@@ -67,7 +69,7 @@ curl http://localhost:52033/health
 }
 ```
 
-> `docker compose up -d` では MCP は常駐しません。IDE 接続時に `docker compose run` で起動します。
+上記の `docker compose run --rm -i mcp-server` は IDE 用の互換方式です。通常の DOLL / フィオ連携では常駐 HTTP MCP を使用してください。
 
 ### 3. 観測テスト
 
@@ -90,6 +92,38 @@ docker compose down
 docker compose down -v   # DB ボリュームも削除
 ```
 
+## OCI 常駐起動
+
+OCI では `.env.oci.example` を `.env.oci` にコピーし、長いランダムな `API_KEY` を必ず設定します。Observatory と DOLL runtime を同じ Docker network に接続し、不要な外部公開を避けます。
+
+```bash
+docker network create doll_runtime || true
+docker compose --env-file .env.oci -f infra/oci/docker-compose.observatory.yml up -d --build
+docker compose --env-file .env.oci -f infra/oci/docker-compose.observatory.yml ps
+```
+
+同一 network 内の DOLL runtime からは `http://mcp-server-http:8080/mcp` を使用します。ホストからのデバッグポートは `.env.oci` の localhost bind のみです。
+
+DOLL runtime 側の接続契約は次の環境変数です。`OBSERVATORY_API_KEY` には `.env` / `.env.oci` の `API_KEY` と同じ値を設定してください。
+
+```env
+OBSERVATORY_ENABLED=true
+OBSERVATORY_MCP_NAME=observatory-local
+OBSERVATORY_MCP_URL=http://127.0.0.1:52036/mcp
+OBSERVATORY_SERVICE_URL=http://127.0.0.1:52033
+OBSERVATORY_API_KEY=local-dev-observatory-key-change-me
+OBSERVATORY_TIMEOUT_MS=45000
+OBSERVATORY_REQUIRE_FRESHNESS_CHECK=true
+```
+
+## ヘルスチェック・ログ・再起動
+
+```bash
+docker compose ps
+docker compose logs -f observation-service mcp-server-http
+docker compose restart mcp-server-http
+```
+
 ## 構成
 
 ```text
@@ -98,7 +132,8 @@ docker compose
   ├── valkey
   ├── searxng
   ├── observation-service   (Playwright + Readability)
-  └── mcp-server            (profile: mcp, IDE 接続時)
+  ├── mcp-server-http       (常駐 Streamable HTTP, /mcp)
+  └── mcp-server            (profile: mcp, stdio 互換)
 ```
 
 ## 環境変数
@@ -110,6 +145,8 @@ docker compose
 | `SERVICE_PORT`      | `52033`    | Service 公開ポート                                          |
 | `SEARXNG_PORT`      | `52034`    | SearXNG 公開ポート                                          |
 | `POSTGRES_PORT`     | `52035`    | PostgreSQL 公開ポート                                       |
+| `MCP_PORT`          | `52036`    | 常駐 Streamable HTTP MCP 公開ポート                         |
+| `MCP_TRANSPORT`     | `http`     | `http` または stdio                                         |
 | `FETCH_TIMEOUT`     | `30`       | 取得タイムアウト（秒）                                      |
 | `FETCH_CONCURRENCY` | `3`        | トピック観測時の並列取得数                                  |
 | `API_KEY`           | (空)       | 設定時は Service / MCP 双方で Bearer 認証。**本番では必須** |

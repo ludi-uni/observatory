@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
+import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import {
   formatMcpError,
@@ -98,12 +101,110 @@ export function createServer(client: ObservationServiceClient): McpServer {
   return server;
 }
 
+type HttpSession = {
+  server: McpServer;
+  transport: StreamableHTTPServerTransport;
+};
+
+function json(res: ServerResponse, status: number, body: unknown): void {
+  const payload = JSON.stringify(body);
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(payload),
+  });
+  res.end(payload);
+}
+
+function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => {
+      const raw = Buffer.concat(chunks).toString("utf8");
+      if (!raw) {
+        resolve(undefined);
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+export function createHttpMcpServer(config: ReturnType<typeof loadConfig>, client: ObservationServiceClient) {
+  const sessions = new Map<string, HttpSession>();
+
+  return createHttpServer(async (req, res) => {
+    const requestUrl = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+
+    if (requestUrl.pathname === "/health" && req.method === "GET") {
+      json(res, 200, { status: "ok", transport: "streamable-http" });
+      return;
+    }
+
+    if (requestUrl.pathname !== config.path) {
+      json(res, 404, { error: "NOT_FOUND" });
+      return;
+    }
+
+    if (config.apiKey && req.headers.authorization !== `Bearer ${config.apiKey}`) {
+      res.setHeader("WWW-Authenticate", "Bearer");
+      json(res, 401, { error: "UNAUTHORIZED" });
+      return;
+    }
+
+    const requestedSessionId = req.headers["mcp-session-id"];
+    const sessionId = typeof requestedSessionId === "string" ? requestedSessionId : undefined;
+    let session = sessionId ? sessions.get(sessionId) : undefined;
+
+    if (!session && req.method === "POST" && !sessionId) {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: randomUUID,
+        onsessioninitialized: (initializedSessionId) => {
+          sessions.set(initializedSessionId, { server, transport });
+        },
+      });
+      const server = createServer(client);
+      transport.onclose = () => {
+        if (transport.sessionId) sessions.delete(transport.sessionId);
+      };
+      session = { server, transport };
+      await server.connect(transport);
+    }
+
+    if (!session) {
+      json(res, 400, { error: "MCP_SESSION_REQUIRED" });
+      return;
+    }
+
+    try {
+      const body = req.method === "POST" ? await readJsonBody(req) : undefined;
+      await session.transport.handleRequest(req, res, body);
+    } catch (error) {
+      console.error("MCP HTTP request failed:", error);
+      if (!res.headersSent) json(res, 500, { error: "MCP_REQUEST_FAILED" });
+    }
+  });
+}
+
 async function main(): Promise<void> {
   const config = loadConfig();
   const client = new ObservationServiceClient(config);
+
+  if (config.transport === "http") {
+    const httpServer = createHttpMcpServer(config, client);
+    httpServer.listen(config.port, config.host, () => {
+      console.error(`Observatory MCP listening on http://${config.host}:${config.port}${config.path}`);
+    });
+    return;
+  }
+
   const server = createServer(client);
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  await server.connect(new StdioServerTransport());
 }
 
 main().catch((error) => {

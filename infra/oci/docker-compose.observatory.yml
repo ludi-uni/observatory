@@ -1,0 +1,51 @@
+name: ${COMPOSE_PROJECT_NAME:-observatory-oci}
+
+# The DOLL runtime must create this network before starting Observatory:
+#   docker network create doll_runtime || true
+services:
+  postgres:
+    extends:
+      file: ../../docker-compose.yml
+      service: postgres
+    ports:
+      - "${POSTGRES_PORT:-127.0.0.1:52035}:5432"
+    networks: [doll_runtime]
+
+  valkey:
+    extends:
+      file: ../../docker-compose.yml
+      service: valkey
+    networks: [doll_runtime]
+
+  searxng:
+    extends:
+      file: ../../docker-compose.yml
+      service: searxng
+    ports:
+      - "${SEARXNG_PORT:-127.0.0.1:52034}:8080"
+    networks: [doll_runtime]
+
+  observation-service:
+    extends:
+      file: ../../docker-compose.yml
+      service: observation-service
+    ports:
+      - "${SERVICE_PORT:-127.0.0.1:52033}:8080"
+    networks: [doll_runtime]
+
+  mcp-server-http:
+    extends:
+      file: ../../docker-compose.yml
+      service: mcp-server-http
+    ports:
+      - "${MCP_PORT:-127.0.0.1:52036}:8080"
+    networks: [doll_runtime]
+
+networks:
+  doll_runtime:
+    external: true
+    name: doll_runtime
+
+volumes:
+  postgres_data:
+    name: observatory_oci_postgres_data

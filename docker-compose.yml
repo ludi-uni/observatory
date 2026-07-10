@@ -1,20 +1,24 @@
-name: observatory
+name: ${COMPOSE_PROJECT_NAME:-observatory-local}
 
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: observatory
-      POSTGRES_PASSWORD: observatory
-      POSTGRES_DB: observatory
+      POSTGRES_USER: ${POSTGRES_USER:-observatory}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-observatory}
+      POSTGRES_DB: ${POSTGRES_DB:-observatory}
     ports:
       - "${POSTGRES_PORT:-52035}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./deploy/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U observatory -d observatory"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-observatory} -d $${POSTGRES_DB:-observatory}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -62,13 +66,14 @@ services:
       - "${SERVICE_PORT:-52033}:8080"
     environment:
       PORT: "8080"
-      DATABASE_URL: postgresql://observatory:observatory@postgres:5432/observatory
+      DATABASE_URL: postgresql://${POSTGRES_USER:-observatory}:${POSTGRES_PASSWORD:-observatory}@postgres:5432/${POSTGRES_DB:-observatory}
       SEARXNG_URL: http://searxng:8080
       FETCH_TIMEOUT: "${FETCH_TIMEOUT:-30}"
+      FETCH_CONCURRENCY: "${FETCH_CONCURRENCY:-3}"
       CACHE_TTL_DAYS: "${CACHE_TTL_DAYS:-7}"
       SEARCH_RESULT_LIMIT: "${SEARCH_RESULT_LIMIT:-5}"
       USE_PLAYWRIGHT: "true"
-      API_KEY: "${API_KEY:-}"
+      API_KEY: "${API_KEY:?API_KEY must be set}"
       OBSERVATORY_RATE_LIMIT_WINDOW_SEC: "${OBSERVATORY_RATE_LIMIT_WINDOW_SEC:-60}"
       OBSERVATORY_RATE_LIMIT_MAX: "${OBSERVATORY_RATE_LIMIT_MAX:-30}"
       OBSERVATORY_MAX_CONCURRENT_OBSERVATIONS: "${OBSERVATORY_MAX_CONCURRENT_OBSERVATIONS:-3}"
@@ -78,6 +83,18 @@ services:
         condition: service_healthy
       searxng:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   mcp-server:
     build:
@@ -86,7 +103,7 @@ services:
     image: observatory/mcp:latest
     environment:
       OBSERVATION_SERVICE_URL: http://observation-service:8080
-      OBSERVATION_API_KEY: "${API_KEY:-}"
+      OBSERVATION_API_KEY: "${API_KEY:?API_KEY must be set}"
       OBSERVATION_TIMEOUT: "${OBSERVATION_TIMEOUT:-30}"
     depends_on:
       observation-service:
@@ -95,5 +112,37 @@ services:
     profiles:
       - mcp
 
+  mcp-server-http:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.mcp
+    image: observatory/mcp:latest
+    restart: unless-stopped
+    environment:
+      MCP_TRANSPORT: http
+      MCP_PORT: "8080"
+      MCP_PATH: /mcp
+      OBSERVATION_SERVICE_URL: http://observation-service:8080
+      OBSERVATION_API_KEY: "${API_KEY:?API_KEY must be set}"
+      OBSERVATION_TIMEOUT: "${OBSERVATION_TIMEOUT:-30}"
+    ports:
+      - "${MCP_PORT:-52036}:8080"
+    depends_on:
+      observation-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   postgres_data:
+    name: observatory_local_postgres_data
