@@ -6,7 +6,7 @@ The repository Compose setup is the source of truth. Start the resident HTTP MCP
 http://127.0.0.1:52036/mcp
 ```
 
-For OCI, use the service URL on the shared Docker network, for example `http://mcp-server-http:8080/mcp`.
+For a production deployment, use the service URL on the shared Docker network, for example `http://mcp-server-http:8080/mcp`.
 
 The existing stdio profile remains available for IDEs that do not support HTTP:
 
@@ -18,7 +18,7 @@ The existing stdio profile remains available for IDEs that do not support HTTP:
       "args": [
         "compose",
         "-f",
-        "D:/path/to/observatory/docker-compose.yml",
+        "/path/to/observatory/docker-compose.yml",
         "--profile",
         "mcp",
         "run",

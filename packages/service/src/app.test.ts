@@ -65,15 +65,15 @@ describe("Observation API", () => {
     const response = await app.request("/v1/observe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: "Oracle Cloud Backup" }),
+      body: JSON.stringify({ topic: "recent changes in a software library" }),
     });
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.summary).toContain("Oracle Cloud Backup");
+    expect(body.summary).toContain("recent changes in a software library");
     expect(body.evidence.length).toBeGreaterThan(0);
     expect(body.sources[0].url).toBe("https://example.com/article");
-    expect(body.topic).toBe("Oracle Cloud Backup");
+    expect(body.topic).toBe("recent changes in a software library");
     expect(body.source_count).toBe(1);
     expect(body.sources[0].content_hash).toMatch(/^sha256:/);
 

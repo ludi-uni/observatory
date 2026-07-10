@@ -6,7 +6,7 @@ describe("RuleBasedSummarizer", () => {
 
   it("builds summary, evidence, and confidence for multiple articles", () => {
     const result = summarizer.summarizeTopic(
-      "Oracle Cloud Backup",
+      "recent changes in a software library",
       [
         {
           url: "https://docs.oracle.com/backup",
@@ -22,7 +22,7 @@ describe("RuleBasedSummarizer", () => {
       2,
     );
 
-    expect(result.summary).toContain("Oracle Cloud Backup");
+    expect(result.summary).toContain("recent changes in a software library");
     expect(result.evidence).toHaveLength(2);
     expect(result.confidence).toBeGreaterThan(0.5);
     expect(result.confidence).toBeLessThanOrEqual(1);

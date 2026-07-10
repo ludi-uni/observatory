@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-observatory}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-observatory}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-observatory}
     ports:
       - "${POSTGRES_PORT:-52035}:5432"
@@ -66,7 +66,7 @@ services:
       - "${SERVICE_PORT:-52033}:8080"
     environment:
       PORT: "8080"
-      DATABASE_URL: postgresql://${POSTGRES_USER:-observatory}:${POSTGRES_PASSWORD:-observatory}@postgres:5432/${POSTGRES_DB:-observatory}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-observatory}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-observatory}
       SEARXNG_URL: http://searxng:8080
       FETCH_TIMEOUT: "${FETCH_TIMEOUT:-30}"
       FETCH_CONCURRENCY: "${FETCH_CONCURRENCY:-3}"

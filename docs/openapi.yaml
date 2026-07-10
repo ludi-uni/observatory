@@ -28,7 +28,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ObserveRequest"
-            example: { topic: Oracle Cloud Backup }
+            example: { topic: recent changes in a software library }
       responses:
         "200":
           description: Evidence-backed observation

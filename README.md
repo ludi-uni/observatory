@@ -42,7 +42,7 @@ curl http://localhost:52033/health
 curl http://localhost:52036/health
 ```
 
-### 2. MCP Server（DOLL / フィオ / HTTP MCP クライアント）
+### 2. MCP Server（ホストアプリ / HTTP MCP クライアント）
 
 常駐版は `http://127.0.0.1:52036/mcp` で利用できます。HTTP MCP クライアントにはこの URL を設定してください。常駐版は `docker compose up -d --build` に含まれ、`docker compose restart mcp-server-http` で再起動できます。
 
@@ -56,7 +56,7 @@ curl http://localhost:52036/health
       "args": [
         "compose",
         "-f",
-        "D:/99.AITuber/observatory/docker-compose.yml",
+        "/path/to/observatory/docker-compose.yml",
         "--profile",
         "mcp",
         "run",
@@ -69,7 +69,7 @@ curl http://localhost:52036/health
 }
 ```
 
-上記の `docker compose run --rm -i mcp-server` は IDE 用の互換方式です。通常の DOLL / フィオ連携では常駐 HTTP MCP を使用してください。
+上記の `docker compose run --rm -i mcp-server` は IDE 用の互換方式です。常駐アプリ連携では常駐 HTTP MCP を使用してください。
 
 ### 3. 観測テスト
 
@@ -82,7 +82,7 @@ curl -X POST http://localhost:52033/v1/observe-url \
 # トピック観測（SearXNG 経由）
 curl -X POST http://localhost:52033/v1/observe \
   -H "Content-Type: application/json" \
-  -d "{\"topic\":\"Oracle Cloud Backup\"}"
+  -d "{\"topic\":\"recent changes in a software library\"}"
 ```
 
 ### 停止・削除
@@ -94,7 +94,7 @@ docker compose down -v   # DB ボリュームも削除
 
 ## OCI 常駐起動
 
-OCI では `.env.oci.example` を `.env.oci` にコピーし、長いランダムな `API_KEY` を必ず設定します。Observatory と DOLL runtime を同じ Docker network に接続し、不要な外部公開を避けます。
+本番環境では `.env.oci.example` を `.env.oci` にコピーし、長いランダムな `API_KEY` を必ず設定します。Observatory とホストランタイムを同じ Docker network に接続し、不要な外部公開を避けます。
 
 ```bash
 docker network create doll_runtime || true
@@ -102,16 +102,16 @@ docker compose --env-file .env.oci -f infra/oci/docker-compose.observatory.yml u
 docker compose --env-file .env.oci -f infra/oci/docker-compose.observatory.yml ps
 ```
 
-同一 network 内の DOLL runtime からは `http://mcp-server-http:8080/mcp` を使用します。ホストからのデバッグポートは `.env.oci` の localhost bind のみです。
+同一 network 内のホストランタイムからは `http://mcp-server-http:8080/mcp` を使用します。ホストからのデバッグポートは `.env.oci` の localhost bind のみです。
 
-DOLL runtime 側の接続契約は次の環境変数です。`OBSERVATORY_API_KEY` には `.env` / `.env.oci` の `API_KEY` と同じ値を設定してください。
+ホストランタイム側の接続契約は次の環境変数です。`OBSERVATORY_API_KEY` には `.env` / `.env.oci` の `API_KEY` と同じ値を設定してください。
 
 ```env
 OBSERVATORY_ENABLED=true
 OBSERVATORY_MCP_NAME=observatory-local
 OBSERVATORY_MCP_URL=http://127.0.0.1:52036/mcp
 OBSERVATORY_SERVICE_URL=http://127.0.0.1:52033
-OBSERVATORY_API_KEY=local-dev-observatory-key-change-me
+OBSERVATORY_API_KEY=replace-with-the-same-value-as-API_KEY
 OBSERVATORY_TIMEOUT_MS=45000
 OBSERVATORY_REQUIRE_FRESHNESS_CHECK=true
 ```

@@ -5,7 +5,7 @@
       "args": [
         "compose",
         "-f",
-        "D:/99.AITuber/observatory/docker-compose.yml",
+        "/path/to/observatory/docker-compose.yml",
         "--profile",
         "mcp",
         "run",

@@ -35,7 +35,7 @@ The service is available at `http://localhost:52033`; SearXNG is at `http://loca
 ```bash
 curl -X POST http://localhost:52033/v1/observe \
   -H 'Content-Type: application/json' \
-  -d '{"topic":"Oracle Cloud Backup"}'
+  -d '{"topic":"recent changes in a software library"}'
 ```
 
 Set `API_KEY` in `.env` before exposing the service outside a trusted network.
@@ -65,7 +65,7 @@ The repository Compose file runs the MCP server through the `mcp` profile and co
       "args": [
         "compose",
         "-f",
-        "D:/path/to/observatory/docker-compose.yml",
+        "/path/to/observatory/docker-compose.yml",
         "--profile",
         "mcp",
         "run",

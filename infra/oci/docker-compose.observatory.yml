@@ -1,6 +1,6 @@
 name: ${COMPOSE_PROJECT_NAME:-observatory-oci}
 
-# The DOLL runtime must create this network before starting Observatory:
+# The host runtime must create this network before starting Observatory:
 #   docker network create doll_runtime || true
 services:
   postgres:
