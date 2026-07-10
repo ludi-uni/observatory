@@ -77,7 +77,9 @@ describe("Observation API", () => {
     expect(body.source_count).toBe(1);
     expect(body.sources[0].content_hash).toMatch(/^sha256:/);
 
-    const recall = await app.request("/v1/observation?topic=Oracle%20Cloud%20Backup");
+    const recall = await app.request(
+      "/v1/observation?topic=recent%20changes%20in%20a%20software%20library",
+    );
     const recallBody = await recall.json();
     expect(recallBody.history).toHaveLength(1);
 

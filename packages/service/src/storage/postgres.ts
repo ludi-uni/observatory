@@ -138,7 +138,7 @@ export class PostgresStorage implements Storage {
           input.confidence,
           input.cacheHit,
           input.sourceCount,
-          input.evidence,
+          serializeJsonb(input.evidence),
           input.observedAt,
         ],
       );
@@ -191,4 +191,12 @@ export class PostgresStorage implements Storage {
       observed_at: row.observed_at.toISOString(),
     }));
   }
+}
+
+export function serializeJsonb(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    throw new TypeError("JSONB value must be JSON-serializable");
+  }
+  return serialized;
 }
