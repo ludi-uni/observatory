@@ -6,7 +6,10 @@ import type { FetchProvider, FetchedPage } from "./types.js";
 export class PlaywrightFetchProvider implements FetchProvider {
   private browser: Browser | null = null;
 
-  constructor(private readonly timeoutMs: number) {}
+  constructor(
+    private readonly timeoutMs: number,
+    private readonly userAgent: string,
+  ) {}
 
   private async getBrowser(): Promise<Browser> {
     if (!this.browser) {
@@ -20,6 +23,7 @@ export class PlaywrightFetchProvider implements FetchProvider {
 
     const browser = await this.getBrowser();
     const page = await browser.newPage();
+    await page.setExtraHTTPHeaders({ "User-Agent": this.userAgent });
 
     try {
       const response = await page.goto(url, {

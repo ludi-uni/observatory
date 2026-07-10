@@ -30,14 +30,17 @@ export class SearxngSearchProvider implements SearchProvider {
       }
 
       const body = (await response.json()) as SearxngResponse;
-      const results = (body.results ?? [])
-        .filter((item) => item.url && item.title)
-        .slice(0, limit)
-        .map((item) => ({
-          title: item.title!,
-          url: item.url!,
-          snippet: item.content,
-        }));
+      const results = (body.results ?? []).slice(0, limit).flatMap((item) =>
+        item.url && item.title
+          ? [
+              {
+                title: item.title,
+                url: item.url,
+                snippet: item.content,
+              },
+            ]
+          : [],
+      );
 
       if (results.length === 0) {
         throw new ObservationError("SEARCH_FAILED");

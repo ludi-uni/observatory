@@ -4,6 +4,9 @@ CREATE TABLE IF NOT EXISTS observations (
     summary TEXT,
     confidence REAL,
     evidence JSONB,
+    query TEXT NOT NULL DEFAULT '',
+    cache_hit BOOLEAN NOT NULL DEFAULT FALSE,
+    source_count INTEGER NOT NULL DEFAULT 0,
     observed_at TIMESTAMP NOT NULL
 );
 
@@ -13,7 +16,11 @@ CREATE TABLE IF NOT EXISTS observation_sources (
     title TEXT,
     url TEXT NOT NULL,
     content TEXT,
-    fetched_at TIMESTAMP NOT NULL
+    fetched_at TIMESTAMP NOT NULL,
+    content_hash TEXT,
+    extractor TEXT,
+    search_rank INTEGER,
+    snippet TEXT
 );
 
 CREATE TABLE IF NOT EXISTS fetched_pages (

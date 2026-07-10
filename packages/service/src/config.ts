@@ -8,6 +8,10 @@ export interface ServiceConfig {
   searchResultLimit: number;
   fetchConcurrency: number;
   usePlaywright: boolean;
+  userAgent: string;
+  rateLimitWindowSec: number;
+  rateLimitMax: number;
+  maxConcurrentObservations: number;
 }
 
 export function loadConfig(): ServiceConfig {
@@ -20,6 +24,14 @@ export function loadConfig(): ServiceConfig {
   const searchResultLimit = Number(process.env.SEARCH_RESULT_LIMIT ?? "5");
   const fetchConcurrency = Number(process.env.FETCH_CONCURRENCY ?? "3");
   const usePlaywright = process.env.USE_PLAYWRIGHT !== "false";
+  const userAgent =
+    process.env.OBSERVATORY_USER_AGENT ??
+    "ObservatoryBot/0.1 (+https://github.com/ludi-uni/observatory)";
+  const rateLimitWindowSec = Number(process.env.OBSERVATORY_RATE_LIMIT_WINDOW_SEC ?? "60");
+  const rateLimitMax = Number(process.env.OBSERVATORY_RATE_LIMIT_MAX ?? "30");
+  const maxConcurrentObservations = Number(
+    process.env.OBSERVATORY_MAX_CONCURRENT_OBSERVATIONS ?? "3",
+  );
 
   return {
     port,
@@ -31,5 +43,9 @@ export function loadConfig(): ServiceConfig {
     searchResultLimit,
     fetchConcurrency,
     usePlaywright,
+    userAgent,
+    rateLimitWindowSec,
+    rateLimitMax,
+    maxConcurrentObservations,
   };
 }

@@ -1,11 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import type { ObservationHistoryEntry } from "@observatory/types";
-import type {
-  CachedPageRecord,
-  SaveObservationInput,
-  Storage,
-} from "./types.js";
+import type { CachedPageRecord, SaveObservationInput, Storage } from "./types.js";
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS observations (
@@ -14,6 +10,9 @@ CREATE TABLE IF NOT EXISTS observations (
     summary TEXT,
     confidence REAL,
     evidence JSONB,
+    query TEXT NOT NULL DEFAULT '',
+    cache_hit BOOLEAN NOT NULL DEFAULT FALSE,
+    source_count INTEGER NOT NULL DEFAULT 0,
     observed_at TIMESTAMP NOT NULL
 );
 
@@ -24,6 +23,10 @@ CREATE TABLE IF NOT EXISTS observation_sources (
     url TEXT NOT NULL,
     content TEXT,
     fetched_at TIMESTAMP NOT NULL
+    ,content_hash TEXT
+    ,extractor TEXT
+    ,search_rank INTEGER
+    ,snippet TEXT
 );
 
 CREATE TABLE IF NOT EXISTS fetched_pages (
@@ -42,6 +45,14 @@ CREATE TABLE IF NOT EXISTS search_queries (
     query_hash TEXT NOT NULL,
     searched_at TIMESTAMP NOT NULL
 );
+
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS query TEXT NOT NULL DEFAULT '';
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS cache_hit BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS source_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE observation_sources ADD COLUMN IF NOT EXISTS content_hash TEXT;
+ALTER TABLE observation_sources ADD COLUMN IF NOT EXISTS extractor TEXT;
+ALTER TABLE observation_sources ADD COLUMN IF NOT EXISTS search_rank INTEGER;
+ALTER TABLE observation_sources ADD COLUMN IF NOT EXISTS snippet TEXT;
 `;
 
 export class PostgresStorage implements Storage {
@@ -106,14 +117,7 @@ export class PostgresStorage implements Storage {
          content_hash = EXCLUDED.content_hash,
          fetched_at = EXCLUDED.fetched_at,
          last_verified_at = EXCLUDED.last_verified_at`,
-      [
-        randomUUID(),
-        input.url,
-        input.title,
-        input.content,
-        input.contentHash,
-        input.fetchedAt,
-      ],
+      [randomUUID(), input.url, input.title, input.content, input.contentHash, input.fetchedAt],
     );
   }
 
@@ -124,13 +128,16 @@ export class PostgresStorage implements Storage {
     try {
       await client.query("BEGIN");
       await client.query(
-        `INSERT INTO observations (id, topic, summary, confidence, evidence, observed_at)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO observations (id, topic, query, summary, confidence, cache_hit, source_count, evidence, observed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           observationId,
           input.topic,
+          input.query,
           input.summary,
           input.confidence,
+          input.cacheHit,
+          input.sourceCount,
           input.evidence,
           input.observedAt,
         ],
@@ -138,8 +145,8 @@ export class PostgresStorage implements Storage {
 
       for (const source of input.sources) {
         await client.query(
-          `INSERT INTO observation_sources (id, observation_id, title, url, content, fetched_at)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
+          `INSERT INTO observation_sources (id, observation_id, title, url, content, fetched_at, content_hash, extractor, search_rank, snippet)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
           [
             randomUUID(),
             observationId,
@@ -147,6 +154,10 @@ export class PostgresStorage implements Storage {
             source.url,
             source.content,
             source.fetchedAt,
+            source.contentHash,
+            source.extractor,
+            source.searchRank ?? null,
+            source.snippet ?? null,
           ],
         );
       }

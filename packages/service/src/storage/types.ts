@@ -14,12 +14,20 @@ export interface StoredSource {
   url: string;
   content: string;
   fetchedAt: Date;
+  contentHash: string;
+  extractor: string;
+  searchRank?: number;
+  snippet?: string;
+  cacheHit?: boolean;
 }
 
 export interface SaveObservationInput {
   topic: string;
+  query: string;
   summary: string;
   confidence: number;
+  cacheHit: boolean;
+  sourceCount: number;
   evidence: Evidence[];
   observedAt: Date;
   sources: StoredSource[];

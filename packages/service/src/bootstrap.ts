@@ -43,7 +43,7 @@ function createSearchProvider(config: ServiceConfig): SearchProvider | undefined
 
 function createFetchProvider(config: ServiceConfig): FetchProvider {
   if (config.usePlaywright) {
-    return new PlaywrightFetchProvider(config.fetchTimeoutMs);
+    return new PlaywrightFetchProvider(config.fetchTimeoutMs, config.userAgent);
   }
-  return new HttpFetchProvider(config.fetchTimeoutMs);
+  return new HttpFetchProvider(config.fetchTimeoutMs, config.userAgent);
 }

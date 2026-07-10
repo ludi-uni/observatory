@@ -41,6 +41,10 @@ const config: ServiceConfig = {
   fetchConcurrency: 3,
   usePlaywright: false,
   searxngUrl: "http://searxng:8080",
+  userAgent: "ObservatoryTest/1.0",
+  rateLimitWindowSec: 60,
+  rateLimitMax: 30,
+  maxConcurrentObservations: 3,
 };
 
 describe("Observation API", () => {
@@ -69,6 +73,9 @@ describe("Observation API", () => {
     expect(body.summary).toContain("Oracle Cloud Backup");
     expect(body.evidence.length).toBeGreaterThan(0);
     expect(body.sources[0].url).toBe("https://example.com/article");
+    expect(body.topic).toBe("Oracle Cloud Backup");
+    expect(body.source_count).toBe(1);
+    expect(body.sources[0].content_hash).toMatch(/^sha256:/);
 
     const recall = await app.request("/v1/observation?topic=Oracle%20Cloud%20Backup");
     const recallBody = await recall.json();

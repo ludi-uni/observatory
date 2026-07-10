@@ -8,7 +8,10 @@ import {
 import type { FetchProvider, FetchedPage } from "./types.js";
 
 export class HttpFetchProvider implements FetchProvider {
-  constructor(private readonly timeoutMs: number) {}
+  constructor(
+    private readonly timeoutMs: number,
+    private readonly userAgent: string,
+  ) {}
 
   async fetch(url: string): Promise<FetchedPage> {
     assertFetchableUrl(url);
@@ -25,7 +28,7 @@ export class HttpFetchProvider implements FetchProvider {
           signal: controller.signal,
           redirect: "manual",
           headers: {
-            "User-Agent": "Observatory/0.1 (+https://github.com/observatory)",
+            "User-Agent": this.userAgent,
             Accept: "text/html,application/xhtml+xml",
           },
         });

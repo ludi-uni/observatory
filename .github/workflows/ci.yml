@@ -22,4 +22,20 @@ jobs:
 
       - run: pnpm install --config.ignore-scripts=true
       - run: pnpm build
+      - run: pnpm typecheck
       - run: pnpm test
+      - name: Validate Docker Compose file
+        run: docker compose config --quiet
+      - name: Start service and verify health
+        run: |
+          docker compose up -d --build
+          for i in {1..30}; do
+            if curl --fail --silent http://localhost:52033/health; then exit 0; fi
+            sleep 5
+          done
+          docker compose ps
+          docker compose logs observation-service
+          exit 1
+      - name: Stop Docker Compose
+        if: always()
+        run: docker compose down -v

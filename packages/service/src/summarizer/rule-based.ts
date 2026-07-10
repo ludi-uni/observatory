@@ -8,7 +8,11 @@ const OFFICIAL_HOST_PATTERNS = [
 ];
 
 export class RuleBasedSummarizer implements Summarizer {
-  summarizeTopic(topic: string, articles: ArticleInput[], attemptedCount: number): SummarizerResult {
+  summarizeTopic(
+    topic: string,
+    articles: ArticleInput[],
+    attemptedCount: number,
+  ): SummarizerResult {
     const evidence = articles.map((article) => ({
       source: article.url,
       claim: firstSentence(article.content, 200),

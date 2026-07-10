@@ -1,6 +1,17 @@
 # Observatory
 
+English README: [README.en.md](./README.en.md)
+
 LLM 向けの観測基盤。検索・取得・抽出・要約を隠蔽し、`observe()` という高レベル API だけを公開する。
+
+## What Observatory is not
+
+- Not a Google Search wrapper
+- Not a generic web scraper
+- Not a crawler-only tool
+- Not a RAG database by itself
+
+Observatory is an observation layer that searches, fetches, extracts, summarizes, stores, and returns evidence-backed observations.
 
 ## Docker で全部起動（推奨）
 
@@ -16,12 +27,12 @@ docker compose up -d --build
 
 起動するサービス:
 
-| サービス | URL | 説明 |
-|---------|-----|------|
-| observation-service | http://localhost:52033 | 観測 API |
-| searxng | http://localhost:52034 | 検索エンジン |
-| postgres | localhost:52035 | 観測履歴 DB |
-| valkey | (内部) | SearXNG 用キャッシュ |
+| サービス            | URL                    | 説明                 |
+| ------------------- | ---------------------- | -------------------- |
+| observation-service | http://localhost:52033 | 観測 API             |
+| searxng             | http://localhost:52034 | 検索エンジン         |
+| postgres            | localhost:52035        | 観測履歴 DB          |
+| valkey              | (内部)                 | SearXNG 用キャッシュ |
 
 動作確認:
 
@@ -42,9 +53,13 @@ curl http://localhost:52033/health
       "command": "docker",
       "args": [
         "compose",
-        "-f", "D:/99.AITuber/observatory/docker-compose.yml",
-        "--profile", "mcp",
-        "run", "--rm", "-i",
+        "-f",
+        "D:/99.AITuber/observatory/docker-compose.yml",
+        "--profile",
+        "mcp",
+        "run",
+        "--rm",
+        "-i",
         "mcp-server"
       ]
     }
@@ -90,14 +105,14 @@ docker compose
 
 `.env` をルートに置くと `docker compose` が読み込みます。雛形は `.env.example` を参照。
 
-| 変数 | デフォルト | 説明 |
-|------|-----------|------|
-| `SERVICE_PORT` | `52033` | Service 公開ポート |
-| `SEARXNG_PORT` | `52034` | SearXNG 公開ポート |
-| `POSTGRES_PORT` | `52035` | PostgreSQL 公開ポート |
-| `FETCH_TIMEOUT` | `30` | 取得タイムアウト（秒） |
-| `FETCH_CONCURRENCY` | `3` | トピック観測時の並列取得数 |
-| `API_KEY` | (空) | 設定時は Service / MCP 双方で Bearer 認証。**本番では必須** |
+| 変数                | デフォルト | 説明                                                        |
+| ------------------- | ---------- | ----------------------------------------------------------- |
+| `SERVICE_PORT`      | `52033`    | Service 公開ポート                                          |
+| `SEARXNG_PORT`      | `52034`    | SearXNG 公開ポート                                          |
+| `POSTGRES_PORT`     | `52035`    | PostgreSQL 公開ポート                                       |
+| `FETCH_TIMEOUT`     | `30`       | 取得タイムアウト（秒）                                      |
+| `FETCH_CONCURRENCY` | `3`        | トピック観測時の並列取得数                                  |
+| `API_KEY`           | (空)       | 設定時は Service / MCP 双方で Bearer 認証。**本番では必須** |
 
 ## ローカル開発（任意）
 

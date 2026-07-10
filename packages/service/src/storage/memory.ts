@@ -1,10 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ObservationHistoryEntry } from "@observatory/types";
-import type {
-  CachedPageRecord,
-  SaveObservationInput,
-  Storage,
-} from "./types.js";
+import type { CachedPageRecord, SaveObservationInput, Storage } from "./types.js";
 
 interface MemoryObservation extends ObservationHistoryEntry {
   topicKey: string;

@@ -25,6 +25,14 @@ export interface ObservationEngineDeps {
   summarizer: Summarizer;
 }
 
+interface FetchedArticle {
+  title: string;
+  content: string;
+  contentHash: string;
+  fetchedAt: Date;
+  cacheHit: boolean;
+}
+
 export class ObservationEngine {
   constructor(private readonly deps: ObservationEngineDeps) {}
 
@@ -42,27 +50,28 @@ export class ObservationEngine {
     const articles: StoredSource[] = [];
     const attemptedCount = searchResults.length;
 
-    await runWithConcurrency(
-      searchResults,
-      this.deps.config.fetchConcurrency,
-      async (result) => {
-        try {
-          assertFetchableUrl(result.url);
-          const article = await this.fetchAndExtract(result.url, result.title);
-          if (!article) {
-            return;
-          }
-          articles.push({
-            title: article.title,
-            url: result.url,
-            content: article.content,
-            fetchedAt: new Date(),
-          });
-        } catch (error) {
-          console.error(`Source fetch failed for ${result.url}:`, error);
+    await runWithConcurrency(searchResults, this.deps.config.fetchConcurrency, async (result) => {
+      try {
+        assertFetchableUrl(result.url);
+        const article = await this.fetchAndExtract(result.url, result.title);
+        if (!article) {
+          return;
         }
-      },
-    );
+        articles.push({
+          title: article.title,
+          url: result.url,
+          content: article.content,
+          fetchedAt: article.fetchedAt,
+          contentHash: article.contentHash,
+          extractor: "mozilla-readability",
+          searchRank: searchResults.indexOf(result) + 1,
+          snippet: result.snippet,
+          cacheHit: article.cacheHit,
+        });
+      } catch (error) {
+        console.error(`Source fetch failed for ${result.url}:`, error);
+      }
+    });
 
     if (articles.length === 0) {
       throw new ObservationError("EXTRACTION_FAILED");
@@ -79,21 +88,38 @@ export class ObservationEngine {
     );
 
     const observedAt = new Date();
+    const evidence = summarized.evidence.map((item) => ({
+      ...item,
+      sources: [item.source],
+      confidence: summarized.confidence,
+    }));
     const response: ObserveResponse = {
+      topic,
+      query: topic,
       summary: summarized.summary,
       confidence: summarized.confidence,
+      cache_hit: articles.length > 0 && articles.every((article) => article.cacheHit ?? false),
+      source_count: articles.length,
       sources: articles.map((article) => ({
         title: article.title,
         url: article.url,
+        fetched_at: article.fetchedAt.toISOString(),
+        content_hash: `sha256:${article.contentHash}`,
+        extractor: article.extractor,
+        search_rank: article.searchRank,
+        snippet: article.snippet,
       })),
-      evidence: summarized.evidence,
+      evidence,
       observed_at: observedAt.toISOString(),
     };
 
     await this.deps.storage.saveObservation({
       topic,
+      query: topic,
       summary: response.summary,
       confidence: response.confidence,
+      cacheHit: response.cache_hit,
+      sourceCount: response.source_count,
       evidence: response.evidence,
       observedAt,
       sources: articles,
@@ -118,13 +144,28 @@ export class ObservationEngine {
       content: article.content,
     });
     const observedAt = new Date();
+    const evidence = summarized.evidence.map((item) => ({
+      ...item,
+      sources: [item.source],
+      confidence: summarized.confidence,
+    }));
 
     return {
       title: article.title,
       summary: summarized.summary,
       content: article.content,
-      evidence: summarized.evidence,
+      evidence,
       observed_at: observedAt.toISOString(),
+      cache_hit: article.cacheHit,
+      source_count: 1,
+      source: {
+        title: article.title,
+        url,
+        fetched_at: article.fetchedAt.toISOString(),
+        content_hash: `sha256:${article.contentHash}`,
+        extractor: "mozilla-readability",
+        snippet: article.content.slice(0, 240),
+      },
     };
   }
 
@@ -141,18 +182,18 @@ export class ObservationEngine {
   private async fetchAndExtract(
     url: string,
     fallbackTitle?: string,
-  ): Promise<{ title: string; content: string } | null> {
+  ): Promise<FetchedArticle | null> {
     assertFetchableUrl(url);
 
-    const cached = await this.deps.storage.getCachedPage(
-      url,
-      this.deps.config.cacheTtlDays,
-    );
+    const cached = await this.deps.storage.getCachedPage(url, this.deps.config.cacheTtlDays);
 
     if (cached) {
       return {
         title: cached.title,
         content: cached.content,
+        contentHash: cached.contentHash,
+        fetchedAt: cached.fetchedAt,
+        cacheHit: true,
       };
     }
 
@@ -175,6 +216,12 @@ export class ObservationEngine {
       fetchedAt,
     });
 
-    return { title, content: extracted.content };
+    return {
+      title,
+      content: extracted.content,
+      contentHash,
+      fetchedAt,
+      cacheHit: false,
+    };
   }
 }

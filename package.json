@@ -13,8 +13,15 @@
     "dev:mcp": "pnpm --filter @observatory/mcp-server dev",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @observatory/service test",
+    "lint": "biome lint . && prettier --check \"**/*.{md,yml,yaml}\"",
+    "format": "biome format --write . && prettier --write \"**/*.{md,yml,yaml}\"",
+    "format:check": "biome format . && prettier --check \"**/*.{md,yml,yaml}\"",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.3",
+    "prettier": "^3.9.4"
   }
 }

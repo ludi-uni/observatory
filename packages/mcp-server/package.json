@@ -9,7 +9,9 @@
   "bin": {
     "observatory-mcp": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc && node dist/index.js",
