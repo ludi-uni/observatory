@@ -53,6 +53,31 @@ docker compose --env-file .env.oci -f infra/oci/docker-compose.observatory.yml u
 
 The internal MCP endpoint is `http://mcp-server-http:8080/mcp`; host debug ports are localhost-only.
 
+### Use from LM Studio
+
+In LM Studio, open the `Program` tab and choose `Install` → `Edit mcp.json`. Set `API_KEY` in `.env` before starting Observatory, then add:
+
+```json
+{
+  "mcpServers": {
+    "observatory": {
+      "url": "http://127.0.0.1:52036/mcp",
+      "headers": {
+        "Authorization": "Bearer <API_KEY from .env>"
+      }
+    }
+  }
+}
+```
+
+Restart LM Studio and use a tool-capable model. For example:
+
+```text
+Check the latest support status for this software library.
+```
+
+If LM Studio and Observatory run on different hosts or containers, replace `127.0.0.1` with a hostname or IP address reachable from LM Studio.
+
 ## MCP clients
 
 The repository Compose file runs the MCP server through the `mcp` profile and connects it to the service over the internal network:

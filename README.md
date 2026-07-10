@@ -71,6 +71,37 @@ curl http://localhost:52036/health
 
 上記の `docker compose run --rm -i mcp-server` は IDE 用の互換方式です。常駐アプリ連携では常駐 HTTP MCP を使用してください。
 
+### LM Studio から使う
+
+LM Studio の `Program` タブで `Install` → `Edit mcp.json` を開き、以下を追加します。先に `.env` の `API_KEY` を設定して Observatory を起動してください。
+
+```json
+{
+  "mcpServers": {
+    "observatory": {
+      "url": "http://127.0.0.1:52036/mcp",
+      "headers": {
+        "Authorization": "Bearer <.env の API_KEY>"
+      }
+    }
+  }
+}
+```
+
+保存後に LM Studio を再起動し、ツール呼び出しに対応したモデルで次のように依頼できます。
+
+```text
+最新のライブラリ対応状況を調べて
+```
+
+接続確認:
+
+```bash
+curl http://127.0.0.1:52036/health
+```
+
+LM Studio と Observatory が別ホスト・別コンテナの場合は、`127.0.0.1` を LM Studio から到達可能なホスト名または IP に変更してください。LM Studio 側で MCP 利用を許可する設定が必要です。
+
 ### 3. 観測テスト
 
 ```bash
